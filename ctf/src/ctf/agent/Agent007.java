@@ -5,6 +5,8 @@ import ctf.common.AgentEnvironment;
 
 import java.lang.Override;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 /**
  * Created by Andrew Paettie on 3/25/15.
@@ -23,11 +25,15 @@ public class Agent007 extends Agent {
     }
 
     public static enum DIRECTION{
-        NORTH, SOUTH, EAST, WEST
+        NORTH, SOUTH, EAST, WEST, NOCHANGE
     }
 
     public static enum ATTACKER_TARGET{
         ENEMY_FLAG, OUR_FLAG
+    }
+
+    public static enum ATTACK_MODE{
+        SEEK_FLAG, CAPTURE_FLAG
     }
 
     public static final int BOARD_SIZE = 10;
@@ -163,50 +169,50 @@ public class Agent007 extends Agent {
 
                 //setup adjacencies
                 if (row == 0 && col == 0){
-                    n.top = null;
-                    n.left = null;
-                    n.right =  nodes[0][1];
-                    n.bottom = nodes[1][0];
+                    n.north = null;
+                    n.west = null;
+                    n.east =  nodes[0][1];
+                    n.south = nodes[1][0];
                 }else if (row == 0 && col != BOARD_SIZE -1){
-                    n.top = null;
-                    n.left = nodes[row][col-1];
-                    n.right =  nodes[row][col+1];
-                    n.bottom = nodes[row+1][col];
+                    n.north = null;
+                    n.west = nodes[row][col-1];
+                    n.east =  nodes[row][col+1];
+                    n.south = nodes[row+1][col];
                 }else if (row == 0 && col == BOARD_SIZE -1){
-                    n.top = null;
-                    n.left = nodes[row][col-1];
-                    n.right =  null;
-                    n.bottom = nodes[row+1][col];
+                    n.north = null;
+                    n.west = nodes[row][col-1];
+                    n.east =  null;
+                    n.south = nodes[row+1][col];
                 }else if (row != 0 && row != BOARD_SIZE -1 && col == 0){
-                    n.top = nodes[row-1][col];
-                    n.left = null;
-                    n.right =  nodes[row][col+1];
-                    n.bottom = nodes[row+1][col];
+                    n.north = nodes[row-1][col];
+                    n.west = null;
+                    n.east =  nodes[row][col+1];
+                    n.south = nodes[row+1][col];
                 }else if (row != 0 && row != BOARD_SIZE -1 && col != BOARD_SIZE-1){
-                    n.top = nodes[row-1][col];
-                    n.left = nodes[row][col-1];
-                    n.right =  nodes[row][col+1];
-                    n.bottom = nodes[row+1][col];
+                    n.north = nodes[row-1][col];
+                    n.west = nodes[row][col-1];
+                    n.east =  nodes[row][col+1];
+                    n.south = nodes[row+1][col];
                 }else if (row != 0 && row != BOARD_SIZE -1 && col == BOARD_SIZE-1){
-                    n.top = nodes[row-1][col];
-                    n.left = nodes[row][col-1];
-                    n.right =  null;
-                    n.bottom = nodes[row+1][col];
+                    n.north = nodes[row-1][col];
+                    n.west = nodes[row][col-1];
+                    n.east =  null;
+                    n.south = nodes[row+1][col];
                 }else if (row == BOARD_SIZE -1 && col == 0){
-                    n.top = nodes[row-1][col];
-                    n.left = null;
-                    n.right =  nodes[row][col+1];
-                    n.bottom = null;
+                    n.north = nodes[row-1][col];
+                    n.west = null;
+                    n.east =  nodes[row][col+1];
+                    n.south = null;
                 }else if (row == BOARD_SIZE -1 && col != BOARD_SIZE-1 && col != 0){
-                    n.top = nodes[row-1][col];
-                    n.left = nodes[row][col-1];
-                    n.right =  nodes[row][col+1];
-                    n.bottom = null;
+                    n.north = nodes[row-1][col];
+                    n.west = nodes[row][col-1];
+                    n.east =  nodes[row][col+1];
+                    n.south = null;
                 }else if (row == BOARD_SIZE -1 && col == BOARD_SIZE-1){
-                    n.top = nodes[row-1][col];
-                    n.left = nodes[row][col-1];
-                    n.right =  null;
-                    n.bottom = null;
+                    n.north = nodes[row-1][col];
+                    n.west = nodes[row][col-1];
+                    n.east =  null;
+                    n.south = null;
                 }
 
                 //setup node types
@@ -251,43 +257,43 @@ public class Agent007 extends Agent {
     public void updateSurroundingNodes(AgentEnvironment inEnvironment){
         //search for obstacles north
         if (inEnvironment.isObstacleNorthImmediate()){
-            if (currentLocation.top != null) {
-                //currentLocation.top.updateNode(NODE_TYPE.OBSTACLE);
-                currentLocation.top = null;
+            if (currentLocation.north != null) {
+                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+                currentLocation.north = null;
             }
         }else {
             //if not obstacle it is enterable space
-            currentLocation.top.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+            currentLocation.north.updateNode(NODE_TYPE.ENTERABLE_SPACE);
         }
         //search for obstacles east
         if (inEnvironment.isObstacleEastImmediate()){
-            if (currentLocation.right != null) {
-                //currentLocation.right.updateNode(NODE_TYPE.OBSTACLE);
-                currentLocation.right = null;
+            if (currentLocation.east != null) {
+                //currentLocation.east.updateNode(NODE_TYPE.OBSTACLE);
+                currentLocation.east = null;
             }
         }else {
             //if not obstacle it is enterable space
-            currentLocation.right.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+            currentLocation.east.updateNode(NODE_TYPE.ENTERABLE_SPACE);
         }
         //search for obstacles west
         if (inEnvironment.isObstacleWestImmediate()){
-            if (currentLocation.left != null) {
-                //currentLocation.left.updateNode(NODE_TYPE.OBSTACLE);
-                currentLocation.left = null;
+            if (currentLocation.west != null) {
+                //currentLocation.west.updateNode(NODE_TYPE.OBSTACLE);
+                currentLocation.west = null;
             }
         }else {
             //if not obstacle it is enterable space
-            currentLocation.left.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+            currentLocation.west.updateNode(NODE_TYPE.ENTERABLE_SPACE);
         }
         //search for obstacles south
         if (inEnvironment.isObstacleSouthImmediate()){
-            if (currentLocation.bottom != null) {
-                //currentLocation.bottom.updateNode(NODE_TYPE.OBSTACLE);
-                currentLocation.bottom = null;
+            if (currentLocation.south != null) {
+                //currentLocation.south.updateNode(NODE_TYPE.OBSTACLE);
+                currentLocation.south = null;
             }
         }else {
             //if not obstacle it is enterable space
-            currentLocation.bottom.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+            currentLocation.south.updateNode(NODE_TYPE.ENTERABLE_SPACE);
         }
     }
 
@@ -299,19 +305,19 @@ public class Agent007 extends Agent {
             switch (moveDirection){
                 case NORTH:
                     //previousLocation = currentLocation;
-                    currentLocation = currentLocation.top;
+                    currentLocation = currentLocation.north;
                     break;
                 case SOUTH:
                     //previousLocation = currentLocation;
-                    currentLocation = currentLocation.bottom;
+                    currentLocation = currentLocation.south;
                     break;
                 case EAST:
                     //previousLocation = currentLocation;
-                    currentLocation = currentLocation.right;
+                    currentLocation = currentLocation.east;
                     break;
                 case WEST:
                     //previousLocation = currentLocation;
-                    currentLocation = currentLocation.left;
+                    currentLocation = currentLocation.west;
                     break;
             }
             //path.add(currentLocation);
@@ -336,14 +342,14 @@ public class Agent007 extends Agent {
 
     public void handleDeadEnd(AgentEnvironment inEnvironment){
         ArrayList<Node> possibleMoves = new ArrayList<Node>();
-        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.top != null)
-            possibleMoves.add(currentLocation.top);
-        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.bottom != null)
-            possibleMoves.add(currentLocation.bottom);
-        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.right != null)
-            possibleMoves.add(currentLocation.right);
-        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.left != null)
-            possibleMoves.add(currentLocation.left);
+        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.north != null)
+            possibleMoves.add(currentLocation.north);
+        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.south != null)
+            possibleMoves.add(currentLocation.south);
+        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.east != null)
+            possibleMoves.add(currentLocation.east);
+        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.west != null)
+            possibleMoves.add(currentLocation.west);
         if (possibleMoves.size() == 1){
             if (path.get(path.size()-1) == possibleMoves.get(0)){
                 //dead end if the only move is back to where we came from
@@ -353,11 +359,48 @@ public class Agent007 extends Agent {
         }
     }
 
+    private DIRECTION findBestPathToGoal(final ATTACK_MODE attackMode){
+        PriorityQueue<SearchNode> nodeQueue = new PriorityQueue<SearchNode>(BOARD_SIZE * BOARD_SIZE, new Comparator<SearchNode>() {
+            @Override
+            public int compare(SearchNode node, SearchNode t1) {
+                int nodeH = attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? node.thisNode.enemyHeuristic : node.thisNode.friendlyHeuristic,
+                    t1H = attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? t1.thisNode.enemyHeuristic : t1.thisNode.friendlyHeuristic;
+                return Integer.compare((nodeH + node.cumulativeDistance),(t1H + t1.cumulativeDistance));
+            }
+        });
+        SearchNode parentSearchNode = new SearchNode(currentLocation, null, 0, DIRECTION.NOCHANGE);
+        nodeQueue.add(parentSearchNode);
+        while(!nodeQueue.isEmpty()){
+            SearchNode searchNode = nodeQueue.remove();
+            if (nodeIsGoal(searchNode, attackMode)){
+                SearchNode currNode = searchNode;
+                while (!currNode.parentNode.equals(parentSearchNode))
+                    currNode = currNode.parentNode;
+                return currNode.directionFromParent;
+            }
+            if (searchNode.thisNode.north != null)
+                nodeQueue.add(new SearchNode(searchNode.thisNode.north, searchNode, 1+searchNode.cumulativeDistance, DIRECTION.NORTH));
+            if (searchNode.thisNode.south != null)
+                nodeQueue.add(new SearchNode(searchNode.thisNode.south, searchNode, 1+searchNode.cumulativeDistance, DIRECTION.SOUTH));
+            if (searchNode.thisNode.east != null)
+                nodeQueue.add(new SearchNode(searchNode.thisNode.east, searchNode, 1+searchNode.cumulativeDistance, DIRECTION.EAST));
+            if (searchNode.thisNode.west != null)
+                nodeQueue.add(new SearchNode(searchNode.thisNode.west, searchNode, 1+searchNode.cumulativeDistance, DIRECTION.WEST));
+        }
+        return DIRECTION.NOCHANGE;
+    }
+
+    private boolean nodeIsGoal(SearchNode node, ATTACK_MODE attackMode){
+        return (attackMode.equals(ATTACK_MODE.SEEK_FLAG)) ?
+                node.thisNode.nodeTypes.contains(NODE_TYPE.ENEMY_BASE) :
+                node.thisNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE);
+    }
+
     private class Node{
-        Node left;
-        Node right;
-        Node top;
-        Node bottom;
+        Node west;
+        Node east;
+        Node north;
+        Node south;
         int row,col;
 
         int enemyHeuristic,
@@ -369,11 +412,11 @@ public class Agent007 extends Agent {
 
         }
 
-        public Node(Node left, Node right, Node top, Node bottom){
-            this.left = left;
-            this.right = right;
-            this.top = top;
-            this.bottom = bottom;
+        public Node(Node west, Node east, Node north, Node south){
+            this.west = west;
+            this.east = east;
+            this.north = north;
+            this.south = south;
             this.nodeTypes = new ArrayList<NODE_TYPE>();
         }
 
@@ -402,5 +445,19 @@ public class Agent007 extends Agent {
         }
 
         //todo ^^^ make these things ^^^
+    }
+
+    private class SearchNode{
+        Node thisNode;
+        SearchNode parentNode;
+        int cumulativeDistance;
+        DIRECTION directionFromParent;
+
+        public SearchNode(Node thisNode, SearchNode parentNode, int cumulativeDistance, DIRECTION directionFromParent) {
+            this.thisNode = thisNode;
+            this.parentNode = parentNode;
+            this.cumulativeDistance = cumulativeDistance;
+            this.directionFromParent = directionFromParent;
+        }
     }
 }
