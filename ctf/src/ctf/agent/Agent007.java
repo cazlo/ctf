@@ -19,7 +19,8 @@ public class Agent007 extends Agent {
         ENTERABLE_SPACE,
         DEAD_END,
         KNOWN_MINE,
-        PLAYER_LOCATION
+        PLAYER_LOCATION,
+        ENEMY_LOCATION
     }
 
     public static enum DIRECTION{
@@ -130,7 +131,7 @@ public class Agent007 extends Agent {
 
                     break;
             }
-            if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && conflictWithPendingMove(newNode) && ! newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE))
+            if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && conflictWithPendingMove(newNode, attackMode) && ! newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE))
                 moveDirection = DIRECTION.NOCHANGE;
             else if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE)){
                 return directionToAction(moveDirection);
@@ -141,63 +142,63 @@ public class Agent007 extends Agent {
         // use all the info above to make a move
         // before returning indicate in 'moveDirection' what direction we are moving in
 
+        ATTACK_MODE attackMode = attackOrCapture(inEnvironment);
         //execute the move
         switch (moveDirection) {
-
             case NORTH:
-                if (! conflictWithPendingMove( currentLocation.north)){
+                if (! conflictWithPendingMove( currentLocation.north, attackMode)){
                     pendingMoves.add(currentLocation.north);
                     currentLocation.north.addPlayerToNode();
                     return AgentAction.MOVE_NORTH;
                 }else{
-                    return findBetterMove( currentLocation.north);
+                    return findBetterMove( currentLocation.north, attackMode);
                 }
             case SOUTH:
-                if (! conflictWithPendingMove( currentLocation.south)){
+                if (! conflictWithPendingMove( currentLocation.south, attackMode)){
                     pendingMoves.add(currentLocation.south);
                     currentLocation.south.addPlayerToNode();
                     return AgentAction.MOVE_SOUTH;
                 }else{
-                    return findBetterMove( currentLocation.south);
+                    return findBetterMove( currentLocation.south, attackMode);
                 }
             case EAST:
-                if (! conflictWithPendingMove( currentLocation.east)){
+                if (! conflictWithPendingMove( currentLocation.east, attackMode)){
                     pendingMoves.add(currentLocation.east);
                     currentLocation.east.addPlayerToNode();
                     return AgentAction.MOVE_EAST;
                 }else{
-                    return findBetterMove( currentLocation.east);
+                    return findBetterMove( currentLocation.east, attackMode);
                 }
             case WEST:
-                if (! conflictWithPendingMove( currentLocation.west)){
+                if (! conflictWithPendingMove( currentLocation.west, attackMode)){
                     pendingMoves.add(currentLocation.west);
                     currentLocation.west.addPlayerToNode();
                     return AgentAction.MOVE_WEST;
                 }else{
-                    return findBetterMove( currentLocation.west);
+                    return findBetterMove( currentLocation.west, attackMode);
                 }
             case NOCHANGE:
-                if (! conflictWithPendingMove( currentLocation) || attackOrCapture(inEnvironment).equals(ATTACK_MODE.CAPTURE_FLAG)){//todo bad hack :(
+                if (! conflictWithPendingMove( currentLocation, attackOrCapture(inEnvironment)) || attackOrCapture(inEnvironment).equals(ATTACK_MODE.CAPTURE_FLAG)){//todo bad hack :(
                     pendingMoves.add(currentLocation);
                     currentLocation.addPlayerToNode();
                     return AgentAction.DO_NOTHING;
                 }else{
-                    return findBetterMove(currentLocation);
+                    return findBetterMove(currentLocation, attackMode);
                 }
             default:
                 return AgentAction.DO_NOTHING;
         }
     }
 
-    private boolean conflictWithPendingMove(Node newLocation){
+    private boolean conflictWithPendingMove(Node newLocation, ATTACK_MODE attack_mode){
         if (newLocation == null)
             return true;
-        if (pendingMoves.contains(newLocation) || !newLocation.isEnterable())
+        if (pendingMoves.contains(newLocation) || !newLocation.isEnterable(attack_mode))
             return true;
         return false;
     }
 
-    private int findBetterMove(Node newLocation){
+    private int findBetterMove(Node newLocation, ATTACK_MODE attack_mode){
         HashMap<Node, DIRECTION> possibleMoves = new HashMap<Node, DIRECTION>();
         if (currentLocation.north != null && !currentLocation.north.equals(newLocation))
             possibleMoves.put(currentLocation.north, DIRECTION.NORTH);
@@ -214,7 +215,7 @@ public class Agent007 extends Agent {
         }
         else{
             for (Node newNode : possibleMoves.keySet()) {
-                if (!conflictWithPendingMove(newNode)) {
+                if (!conflictWithPendingMove(newNode, attack_mode)) {
                     DIRECTION newDirection = possibleMoves.get(newNode);
                     switch (newDirection) {
                         case NORTH:
@@ -409,6 +410,7 @@ public class Agent007 extends Agent {
     }
 
     public void updateSurroundingNodes(AgentEnvironment inEnvironment){
+        //obstacle search
         //search for obstacles north
         if (inEnvironment.isObstacleNorthImmediate()){
             if (currentLocation.north != null) {
@@ -454,15 +456,61 @@ public class Agent007 extends Agent {
             currentLocation.south.updateNode(NODE_TYPE.ENTERABLE_SPACE);
         }
 
-        Node ourBase = friendlyBaseWestOrEast.equals(DIRECTION.WEST) ? nodes[BOARD_SIZE/2][0] : nodes[BOARD_SIZE/2][BOARD_SIZE-1];
-        if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM)){
-            //make our base enterable if enemy has our flag
-            ourBase.updateNode(NODE_TYPE.ENTERABLE_SPACE);
-        }else{
-            //our base is not enterable otherwise
-            if (ourBase.nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE))
-                ourBase.nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
-        }
+        //todo enemy search
+//        //search for enemy north
+//        if (inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)){
+//            if (currentLocation.north != null) {
+//                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+//                nodes[currentLocation.north.row][currentLocation.north.col] = null;
+//                currentLocation.north = null;
+//            }
+//        }else {
+//            //if not obstacle it is enterable space
+//            currentLocation.north.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }
+//        //search for obstacles east
+//        if (inEnvironment.isObstacleEastImmediate()){
+//            if (currentLocation.east != null) {
+//                //currentLocation.east.updateNode(NODE_TYPE.OBSTACLE);
+//                nodes[currentLocation.east.row][currentLocation.east.col] = null;
+//                currentLocation.east = null;
+//            }
+//        }else {
+//            //if not obstacle it is enterable space
+//            currentLocation.east.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }
+//        //search for obstacles west
+//        if (inEnvironment.isObstacleWestImmediate()){
+//            if (currentLocation.west != null) {
+//                //currentLocation.west.updateNode(NODE_TYPE.OBSTACLE);
+//                nodes[currentLocation.west.row][currentLocation.west.col] = null;
+//                currentLocation.west = null;
+//            }
+//        }else {
+//            //if not obstacle it is enterable space
+//            currentLocation.west.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }
+//        //search for obstacles south
+//        if (inEnvironment.isObstacleSouthImmediate()){
+//            if (currentLocation.south != null) {
+//                //currentLocation.south.updateNode(NODE_TYPE.OBSTACLE);
+//                nodes[currentLocation.south.row][currentLocation.south.col] = null;
+//                currentLocation.south = null;
+//            }
+//        }else {
+//            //if not obstacle it is enterable space
+//            currentLocation.south.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }
+//
+//        Node ourBase = friendlyBaseWestOrEast.equals(DIRECTION.WEST) ? nodes[BOARD_SIZE/2][0] : nodes[BOARD_SIZE/2][BOARD_SIZE-1];
+//        if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM)){
+//            //make our base enterable if enemy has our flag
+//            ourBase.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }else{
+//            //our base is not enterable otherwise
+//            if (ourBase.nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE))
+//                ourBase.nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
+//        }
     }
 
     //update location and add new location ot the path
@@ -471,12 +519,14 @@ public class Agent007 extends Agent {
             currentLocation.removePlayerFromNode();
             currentLocation = initialLocation;
             currentLocation.addPlayerToNode();
+            path = new ArrayList<Node>();//new path on tag
         }else{//if we are not in the initial position, then our move was successful
             switch (moveDirection){
                 case NORTH:
                     //previousLocation = currentLocation;
                     if (!inEnvironment.isAgentNorth(AgentEnvironment.OUR_TEAM, true))
                         currentLocation.removePlayerFromNode();
+                    //todo check for there is not an agent in opposite direction of move, remove player from node
                     if (currentLocation.isDeadEnd()) {
                         Node newLocation = currentLocation.north;
                         nodes[currentLocation.row][currentLocation.col] = null;
@@ -585,68 +635,73 @@ public class Agent007 extends Agent {
         return isBlocking;
     }
 
-    public DIRECTION findBestNonconflictingMove(AgentEnvironment inEnvironment, DIRECTION pendingDirection){
-        switch (pendingDirection) {
-
-            case NORTH:
-                if (currentLocation.north.isEnterable())
-                    return pendingDirection;
-                break;
-            case SOUTH:
-                if (currentLocation.south.isEnterable())
-                    return pendingDirection;
-                break;
-            case EAST:
-                if (! inEnvironment.isAgentEast(AgentEnvironment.OUR_TEAM, true))
-                    return pendingDirection;
-                break;
-            case WEST:
-                if (! inEnvironment.isAgentWest(AgentEnvironment.OUR_TEAM, true))
-                    return pendingDirection;
-                break;
-        }
-
-        //DIRECTION newDirection  = DIRECTION.NOCHANGE;
-
-        ArrayList<DIRECTION> possibleMoves = new ArrayList<DIRECTION>();
-        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.north != null)
-            possibleMoves.add(DIRECTION.NORTH);
-        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.south != null)
-            possibleMoves.add(DIRECTION.SOUTH);
-        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.east != null)
-            possibleMoves.add(DIRECTION.EAST);
-        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.west != null)
-            possibleMoves.add(DIRECTION.WEST);
-
-        for (DIRECTION possibleDirection : possibleMoves) {
-            switch (possibleDirection) {
-
-                case NORTH:
-                    if (! inEnvironment.isAgentNorth(AgentEnvironment.OUR_TEAM, true))
-                        return DIRECTION.NORTH;
-                case SOUTH:
-                    if (! inEnvironment.isAgentSouth(AgentEnvironment.OUR_TEAM, true))
-                        return DIRECTION.SOUTH;
-                case EAST:
-                    if (! inEnvironment.isAgentEast(AgentEnvironment.OUR_TEAM, true))
-                        return DIRECTION.EAST;
-                case WEST:
-                    if (! inEnvironment.isAgentWest(AgentEnvironment.OUR_TEAM, true))
-                        return DIRECTION.WEST;
-            }
-        }
-        return DIRECTION.NOCHANGE;
-    }
+//    public DIRECTION findBestNonconflictingMove(AgentEnvironment inEnvironment, DIRECTION pendingDirection){
+//        switch (pendingDirection) {
+//
+//            case NORTH:
+//                if (currentLocation.north.isEnterable())
+//                    return pendingDirection;
+//                break;
+//            case SOUTH:
+//                if (currentLocation.south.isEnterable())
+//                    return pendingDirection;
+//                break;
+//            case EAST:
+//                if (! inEnvironment.isAgentEast(AgentEnvironment.OUR_TEAM, true))
+//                    return pendingDirection;
+//                break;
+//            case WEST:
+//                if (! inEnvironment.isAgentWest(AgentEnvironment.OUR_TEAM, true))
+//                    return pendingDirection;
+//                break;
+//        }
+//
+//        //DIRECTION newDirection  = DIRECTION.NOCHANGE;
+//
+//        ArrayList<DIRECTION> possibleMoves = new ArrayList<DIRECTION>();
+//        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.north != null)
+//            possibleMoves.add(DIRECTION.NORTH);
+//        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.south != null)
+//            possibleMoves.add(DIRECTION.SOUTH);
+//        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.east != null)
+//            possibleMoves.add(DIRECTION.EAST);
+//        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.west != null)
+//            possibleMoves.add(DIRECTION.WEST);
+//
+//        for (DIRECTION possibleDirection : possibleMoves) {
+//            switch (possibleDirection) {
+//
+//                case NORTH:
+//                    if (! inEnvironment.isAgentNorth(AgentEnvironment.OUR_TEAM, true))
+//                        return DIRECTION.NORTH;
+//                case SOUTH:
+//                    if (! inEnvironment.isAgentSouth(AgentEnvironment.OUR_TEAM, true))
+//                        return DIRECTION.SOUTH;
+//                case EAST:
+//                    if (! inEnvironment.isAgentEast(AgentEnvironment.OUR_TEAM, true))
+//                        return DIRECTION.EAST;
+//                case WEST:
+//                    if (! inEnvironment.isAgentWest(AgentEnvironment.OUR_TEAM, true))
+//                        return DIRECTION.WEST;
+//            }
+//        }
+//        return DIRECTION.NOCHANGE;
+//    }
 
     public void handleDeadEnd(AgentEnvironment inEnvironment){
         ArrayList<Node> possibleMoves = new ArrayList<Node>();
-        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.north != null)
+        boolean capFlag = attackOrCapture(inEnvironment).equals(ATTACK_MODE.CAPTURE_FLAG);
+        if (! inEnvironment.isObstacleNorthImmediate() && currentLocation.north != null
+                && (capFlag && !inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)))
             possibleMoves.add(currentLocation.north);
-        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.south != null)
+        if (! inEnvironment.isObstacleSouthImmediate() && currentLocation.south != null
+                && (capFlag && !inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)))
             possibleMoves.add(currentLocation.south);
-        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.east != null)
+        if (! inEnvironment.isObstacleEastImmediate() && currentLocation.east != null
+                && (capFlag && !inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)))
             possibleMoves.add(currentLocation.east);
-        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.west != null)
+        if (! inEnvironment.isObstacleWestImmediate() && currentLocation.west != null
+                && (capFlag && !inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)))
             possibleMoves.add(currentLocation.west);
         if (possibleMoves.size() == 1){
             if (path.get(path.size()-1) == possibleMoves.get(0)){
@@ -670,7 +725,7 @@ public class Agent007 extends Agent {
         return ATTACK_MODE.SEEK_FLAG;
     }
 
-
+    //a* for pathfinding
     private DIRECTION findBestPathToGoal(final ATTACK_MODE attackMode, AgentEnvironment inEnvironment){
         PriorityQueue<SearchNode> nodeQueue = new PriorityQueue<SearchNode>(BOARD_SIZE * BOARD_SIZE, new Comparator<SearchNode>() {
             @Override
@@ -696,43 +751,71 @@ public class Agent007 extends Agent {
                     currNode = currNode.parentNode;
                 return currNode.directionFromParent;
             }
-            if (searchNode.thisNode.north != null && searchNode.thisNode.north.isEnterable()
+            if (searchNode.thisNode.north != null && searchNode.thisNode.north.isEnterable(attackMode)
                     ) {// && nodeCanBeOccupied(inEnvironment, DIRECTION.NORTH, searchNode.thisNode.north))// && !inEnvironment.isAgentNorth(AgentEnvironment.OUR_TEAM, true))
                 SearchNode northNode = new SearchNode(searchNode.thisNode.north, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.NORTH);
                 //if (!expandedNodes.contains(northNode.thisNode.north))
-                if (!nodeAlreadyExpanded(searchNode.thisNode.north, expandedNodes))
-                    nodeQueue.add(northNode);
+                if (!nodeAlreadyExpanded(searchNode.thisNode.north, expandedNodes)) {
+                    if (expandedNodes.size() == 1
+                            && inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)
+                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                        //dont expand node
+                    }else {
+                        nodeQueue.add(northNode);
+                    }
+                }
             }
-            if (searchNode.thisNode.south != null && searchNode.thisNode.south.isEnterable()
+            if (searchNode.thisNode.south != null && searchNode.thisNode.south.isEnterable(attackMode)
                     ) {//&& nodeCanBeOccupied(inEnvironment, DIRECTION.SOUTH, searchNode.thisNode.south))// && !inEnvironment.isAgentSouth(AgentEnvironment.OUR_TEAM, true))
                 SearchNode southNode = new SearchNode(searchNode.thisNode.south, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.SOUTH);
                 //if (!expandedNodes.contains(southNode.thisNode.south))
-                if (!nodeAlreadyExpanded(searchNode.thisNode.south, expandedNodes))
-                    nodeQueue.add(southNode);
+                if (!nodeAlreadyExpanded(searchNode.thisNode.south, expandedNodes)){
+                    if (expandedNodes.size() == 1
+                            && inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)
+                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                        //dont expand node
+                    }else {
+                        nodeQueue.add(southNode);
+                    }
+                }
             }
-            if (searchNode.thisNode.east != null && searchNode.thisNode.east.isEnterable()
+            if (searchNode.thisNode.east != null && searchNode.thisNode.east.isEnterable(attackMode)
                     ) {// && nodeCanBeOccupied(inEnvironment, DIRECTION.EAST, searchNode.thisNode.east))// && !inEnvironment.isAgentEast(AgentEnvironment.OUR_TEAM, true))
                 SearchNode eastNode = new SearchNode(searchNode.thisNode.east, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.EAST);
                 //if (!expandedNodes.contains(eastNode.thisNode.east))
-                if (!nodeAlreadyExpanded(searchNode.thisNode.east, expandedNodes))
-                    nodeQueue.add(eastNode);
+                if (!nodeAlreadyExpanded(searchNode.thisNode.east, expandedNodes)){
+                    if (expandedNodes.size() == 1
+                            && inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)
+                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                        //dont expand node
+                    }else {
+                        nodeQueue.add(eastNode);
+                    }
+                }
             }
-            if (searchNode.thisNode.west != null && searchNode.thisNode.west.isEnterable()
+            if (searchNode.thisNode.west != null && searchNode.thisNode.west.isEnterable(attackMode)
                     ) {// && nodeCanBeOccupied(inEnvironment, DIRECTION.WEST, searchNode.thisNode.west))// && !inEnvironment.isAgentWest(AgentEnvironment.OUR_TEAM, true))
                 SearchNode westNode = new SearchNode(searchNode.thisNode.west, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.WEST);
                 //if (!expandedNodes.contains(westNode.thisNode.west))
-                if (!nodeAlreadyExpanded(searchNode.thisNode.west, expandedNodes))
-                    nodeQueue.add(westNode);
+                if (!nodeAlreadyExpanded(searchNode.thisNode.west, expandedNodes)){
+                    if (expandedNodes.size() == 1
+                            && inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)
+                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                        //dont expand node
+                    }else {
+                        nodeQueue.add(westNode);
+                    }
+                }
             }
         }
         //hack because this code is broken :(
-        if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
-            DIRECTION pathDirection = followPathBackHome();
-            //switch (pathDirection)
-            return pathDirection;
-        }
+//        if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+//            DIRECTION pathDirection = followPathBackHome();
+//            //switch (pathDirection)
+//            return pathDirection;
+//        }
 
-        return DIRECTION.NOCHANGE;
+        return DIRECTION.NOCHANGE;//case when pathfinding fails
     }
 
     private boolean nodeIsGoal(SearchNode node, ATTACK_MODE attackMode){
@@ -870,8 +953,12 @@ public class Agent007 extends Agent {
             return false;
         }
 
-        public boolean isEnterable(){
-            return nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE) || nodeTypes.contains(NODE_TYPE.UNKOWN);
+        public boolean isEnterable(ATTACK_MODE attack_mode){
+            if (nodeTypes.contains(NODE_TYPE.DEAD_END))
+                return false;
+            return nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE) || nodeTypes.contains(NODE_TYPE.UNKOWN) ||
+                    (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG)
+                     ) ;
         }
         //todo ^^^ make these things ^^^
 
