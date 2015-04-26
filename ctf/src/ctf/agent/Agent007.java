@@ -32,11 +32,12 @@ public class Agent007 extends Agent {
     }
 
     public static enum ATTACK_MODE{
-        SEEK_FLAG, CAPTURE_FLAG
+        SEEK_FLAG, CAPTURE_FLAG, DEFEND_FLAG
     }
 
     public static final int BOARD_SIZE = 10;
     public static final int FLAG_ROW = (BOARD_SIZE / 2);
+    public static final int ENEMY_TIMEOUT = 5;
 
 //    public static final int AGENT_0 = 0;
 //    public static final int AGENT_1 = 1;
@@ -87,6 +88,7 @@ public class Agent007 extends Agent {
         }
 
         if (pendingMoves.size() == 2){
+            removePlayersFromAppropriateNodes(pendingMoves);
             pendingMoves = new ArrayList<Node>();
         }
 
@@ -131,11 +133,11 @@ public class Agent007 extends Agent {
 
                     break;
             }
-            if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && conflictWithPendingMove(newNode, attackMode) && ! newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE))
-                moveDirection = DIRECTION.NOCHANGE;
-            else if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE)){
-                return directionToAction(moveDirection);
-            }
+//            if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && conflictWithPendingMove(newNode, attackMode) && ! newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE))
+//                moveDirection = DIRECTION.NOCHANGE;
+//            else if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && newNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE)){
+//                return directionToAction(moveDirection);
+//            }
             //moveDirection = findBestNonconflictingMove(inEnvironment, moveDirection);
             willMove = !moveDirection.equals(DIRECTION.NOCHANGE);
         }
@@ -187,6 +189,22 @@ public class Agent007 extends Agent {
                 }
             default:
                 return AgentAction.DO_NOTHING;
+        }
+    }
+
+    private void removePlayersFromAppropriateNodes(ArrayList<Node> pendingMoves){
+        for (int row = 0; row < BOARD_SIZE; row++){
+            for (int col = 0; col < BOARD_SIZE; col++){
+                Node node = nodes[row][col];
+                if (node != null && !pendingMoves.contains(node)){
+                    node.removePlayerFromNode();
+                }
+                if (node != null && node.enemyLastSeen > ENEMY_TIMEOUT){
+                    node.removeEnemyPlayer();
+                }else if (node != null){
+                    node.enemyLastSeen++;
+                }
+            }
         }
     }
 
@@ -457,17 +475,33 @@ public class Agent007 extends Agent {
         }
 
         //todo enemy search
-//        //search for enemy north
-//        if (inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)){
-//            if (currentLocation.north != null) {
-//                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
-//                nodes[currentLocation.north.row][currentLocation.north.col] = null;
-//                currentLocation.north = null;
-//            }
-//        }else {
-//            //if not obstacle it is enterable space
-//            currentLocation.north.updateNode(NODE_TYPE.ENTERABLE_SPACE);
-//        }
+        //search for enemy north
+        if (inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)){
+            if (currentLocation.north != null) {
+                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+                nodes[currentLocation.north.row][currentLocation.north.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+            }
+        }else {
+            //currentLocation.north.updateNode(NODE_TYPE.ENEMY_LOCATION);
+        }
+        if (inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)) {
+            if (currentLocation.south != null) {
+                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+                nodes[currentLocation.south.row][currentLocation.south.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+            }
+        }
+        if (inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)) {
+            if (currentLocation.east != null) {
+                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+                nodes[currentLocation.east.row][currentLocation.east.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+            }
+        }
+        if (inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)) {
+            if (currentLocation.west != null) {
+                //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
+                nodes[currentLocation.west.row][currentLocation.west.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+            }
+        }
 //        //search for obstacles east
 //        if (inEnvironment.isObstacleEastImmediate()){
 //            if (currentLocation.east != null) {
@@ -477,7 +511,15 @@ public class Agent007 extends Agent {
 //            }
 //        }else {
 //            //if not obstacle it is enterable space
-//            currentLocation.east.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//            currentL//        Node ourBase = friendlyBaseWestOrEast.equals(DIRECTION.WEST) ? nodes[BOARD_SIZE/2][0] : nodes[BOARD_SIZE/2][BOARD_SIZE-1];
+//        if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM)){
+//            //make our base enterable if enemy has our flag
+//            ourBase.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+//        }else{
+//            //our base is not enterable otherwise
+//            if (ourBase.nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE))
+//                ourBase.nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
+//        }ocation.east.updateNode(NODE_TYPE.ENTERABLE_SPACE);
 //        }
 //        //search for obstacles west
 //        if (inEnvironment.isObstacleWestImmediate()){
@@ -502,15 +544,17 @@ public class Agent007 extends Agent {
 //            currentLocation.south.updateNode(NODE_TYPE.ENTERABLE_SPACE);
 //        }
 //
-//        Node ourBase = friendlyBaseWestOrEast.equals(DIRECTION.WEST) ? nodes[BOARD_SIZE/2][0] : nodes[BOARD_SIZE/2][BOARD_SIZE-1];
-//        if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM)){
-//            //make our base enterable if enemy has our flag
-//            ourBase.updateNode(NODE_TYPE.ENTERABLE_SPACE);
-//        }else{
-//            //our base is not enterable otherwise
-//            if (ourBase.nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE))
-//                ourBase.nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
-//        }
+
+        //update freidnly base enterability based on whether or not enemy has flag
+        Node ourBase = friendlyBaseWestOrEast.equals(DIRECTION.WEST) ? nodes[BOARD_SIZE/2][0] : nodes[BOARD_SIZE/2][BOARD_SIZE-1];
+        if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM)){
+            //make our base enterable if enemy has our flag
+            ourBase.updateNode(NODE_TYPE.ENTERABLE_SPACE);
+        }else{
+            //our base is not enterable otherwise
+            if (ourBase.nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE))
+                ourBase.nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
+        }
     }
 
     //update location and add new location ot the path
@@ -591,7 +635,13 @@ public class Agent007 extends Agent {
 //        }else {//if (!path.contains(currentLocation)){
 //
             path.add(currentLocation);
-        }else{
+
+        }else if (path.size() > 0 && path.get(path.size()-1).equals(currentLocation)) {
+            //do nothing
+
+        }
+
+        else{
             path.add(currentLocation);
 
         }
@@ -704,7 +754,7 @@ public class Agent007 extends Agent {
                 && (capFlag && !inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)))
             possibleMoves.add(currentLocation.west);
         if (possibleMoves.size() == 1){
-            if (path.get(path.size()-1) == possibleMoves.get(0)){
+            if (path.size() >= 2 && path.get(path.size()-2) == possibleMoves.get(0)){
                 //dead end if the only move is back to where we came from
                 currentLocation.updateNode(NODE_TYPE.DEAD_END);
                 //previousLocation = path.get(path.size()-1);
@@ -756,9 +806,7 @@ public class Agent007 extends Agent {
                 SearchNode northNode = new SearchNode(searchNode.thisNode.north, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.NORTH);
                 //if (!expandedNodes.contains(northNode.thisNode.north))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.north, expandedNodes)) {
-                    if (expandedNodes.size() == 1
-                            && inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)
-                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && northNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(northNode);
@@ -770,9 +818,7 @@ public class Agent007 extends Agent {
                 SearchNode southNode = new SearchNode(searchNode.thisNode.south, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.SOUTH);
                 //if (!expandedNodes.contains(southNode.thisNode.south))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.south, expandedNodes)){
-                    if (expandedNodes.size() == 1
-                            && inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)
-                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && southNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(southNode);
@@ -784,9 +830,7 @@ public class Agent007 extends Agent {
                 SearchNode eastNode = new SearchNode(searchNode.thisNode.east, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.EAST);
                 //if (!expandedNodes.contains(eastNode.thisNode.east))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.east, expandedNodes)){
-                    if (expandedNodes.size() == 1
-                            && inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)
-                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && eastNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(eastNode);
@@ -798,9 +842,7 @@ public class Agent007 extends Agent {
                 SearchNode westNode = new SearchNode(searchNode.thisNode.west, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.WEST);
                 //if (!expandedNodes.contains(westNode.thisNode.west))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.west, expandedNodes)){
-                    if (expandedNodes.size() == 1
-                            && inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)
-                            && attackMode.equals(ATTACK_MODE.CAPTURE_FLAG)){
+                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && westNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(westNode);
@@ -897,6 +939,7 @@ public class Agent007 extends Agent {
 
         int enemyHeuristic,
             friendlyHeuristic; //heuristic for going to friendly base (cappping flag)
+        int enemyLastSeen = -1;
 
         ArrayList<NODE_TYPE> nodeTypes;
 
@@ -923,6 +966,10 @@ public class Agent007 extends Agent {
             if (n.equals(NODE_TYPE.ENTERABLE_SPACE) && nodeTypes.contains(NODE_TYPE.PLAYER_LOCATION)){
                 nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
             }
+            if (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && n.equals(NODE_TYPE.ENTERABLE_SPACE))
+                nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
+            if (n.equals(NODE_TYPE.ENEMY_LOCATION))
+                this.enemyLastSeen = 0;
         }
 
         public void addPlayerToNode(){
@@ -930,6 +977,11 @@ public class Agent007 extends Agent {
                 nodeTypes.remove(NODE_TYPE.ENTERABLE_SPACE);
             if (!nodeTypes.contains(NODE_TYPE.PLAYER_LOCATION))
                 nodeTypes.add(NODE_TYPE.PLAYER_LOCATION);
+        }
+
+        public void removeEnemyPlayer() {
+            nodeTypes.remove(NODE_TYPE.ENEMY_LOCATION);
+            enemyLastSeen = -1;
         }
 
         public void removePlayerFromNode(){
@@ -957,11 +1009,15 @@ public class Agent007 extends Agent {
             if (nodeTypes.contains(NODE_TYPE.DEAD_END))
                 return false;
             return nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE) || nodeTypes.contains(NODE_TYPE.UNKOWN) ||
-                    (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG)
-                     ) ;
+                    (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG) ||
+                    (nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION) && !attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG))) ;
         }
-        //todo ^^^ make these things ^^^
+        public boolean hasEnemy(){
+            return nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION);
+        }
 
+
+        //todo ^^^ make these things ^^^
 
         @Override
         public boolean equals(Object o) {
