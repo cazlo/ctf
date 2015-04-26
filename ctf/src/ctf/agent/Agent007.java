@@ -481,7 +481,7 @@ public class Agent007 extends Agent {
         if (inEnvironment.isAgentNorth(AgentEnvironment.ENEMY_TEAM, true)){
             if (currentLocation.north != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
-                nodes[currentLocation.north.row][currentLocation.north.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+                currentLocation.north.updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
         }else if (currentLocation.north != null){
             //nodes[currentLocation.north.row][currentLocation.north.col].removeEnemyPlayer();
@@ -490,27 +490,27 @@ public class Agent007 extends Agent {
         if (inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.south != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
-                nodes[currentLocation.south.row][currentLocation.south.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+                currentLocation.south.updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
-        }else if (currentLocation.south != null){
+        } else if (currentLocation.south != null){
             //nodes[currentLocation.south.row][currentLocation.south.col].removeEnemyPlayer();
             currentLocation.south.removeEnemyPlayer();
         }
         if (inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.east != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
-                nodes[currentLocation.east.row][currentLocation.east.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+                currentLocation.east.updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
-        }else if (currentLocation.east != null){
+        } else if (currentLocation.east != null){
             //nodes[currentLocation.east.row][currentLocation.east.col].removeEnemyPlayer();
             currentLocation.east.removeEnemyPlayer();
         }
         if (inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.west != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
-                nodes[currentLocation.west.row][currentLocation.west.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
+                currentLocation.west.updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
-        }else if (currentLocation.west != null){
+        } else if (currentLocation.west != null){
             //nodes[currentLocation.west.row][currentLocation.west.col].removeEnemyPlayer();
             currentLocation.west.removeEnemyPlayer();
         }
