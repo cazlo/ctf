@@ -58,6 +58,7 @@ public class Agent007 extends Agent {
 
     public static Node[][] nodes = new Node[BOARD_SIZE][BOARD_SIZE];
     public static ArrayList<Node> pendingMoves = new ArrayList<Node>();
+    public static boolean capperCantMove = false;
 
     public Agent007(){
         path = new ArrayList<Node>();
@@ -72,6 +73,7 @@ public class Agent007 extends Agent {
         }
 
         initialMove = true;
+        capperCantMove = false;
     }
 
     @Override
@@ -199,7 +201,7 @@ public class Agent007 extends Agent {
                 if (node != null && !pendingMoves.contains(node)){
                     node.removePlayerFromNode();
                 }
-                if (node != null && node.enemyLastSeen > ENEMY_TIMEOUT){
+                if (node != null && node.enemyLastSeen >= ENEMY_TIMEOUT){
                     node.removeEnemyPlayer();
                 }else if (node != null){
                     node.enemyLastSeen++;
@@ -481,26 +483,36 @@ public class Agent007 extends Agent {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
                 nodes[currentLocation.north.row][currentLocation.north.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
-        }else {
-            //currentLocation.north.updateNode(NODE_TYPE.ENEMY_LOCATION);
+        }else if (currentLocation.north != null){
+            //nodes[currentLocation.north.row][currentLocation.north.col].removeEnemyPlayer();
+            currentLocation.north.removeEnemyPlayer();
         }
         if (inEnvironment.isAgentSouth(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.south != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
                 nodes[currentLocation.south.row][currentLocation.south.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
+        }else if (currentLocation.south != null){
+            //nodes[currentLocation.south.row][currentLocation.south.col].removeEnemyPlayer();
+            currentLocation.south.removeEnemyPlayer();
         }
         if (inEnvironment.isAgentEast(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.east != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
                 nodes[currentLocation.east.row][currentLocation.east.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
+        }else if (currentLocation.east != null){
+            //nodes[currentLocation.east.row][currentLocation.east.col].removeEnemyPlayer();
+            currentLocation.east.removeEnemyPlayer();
         }
         if (inEnvironment.isAgentWest(AgentEnvironment.ENEMY_TEAM, true)) {
             if (currentLocation.west != null) {
                 //currentLocation.north.updateNode(NODE_TYPE.OBSTACLE);
                 nodes[currentLocation.west.row][currentLocation.west.col].updateNode(NODE_TYPE.ENEMY_LOCATION);
             }
+        }else if (currentLocation.west != null){
+            //nodes[currentLocation.west.row][currentLocation.west.col].removeEnemyPlayer();
+            currentLocation.west.removeEnemyPlayer();
         }
 //        //search for obstacles east
 //        if (inEnvironment.isObstacleEastImmediate()){
@@ -564,7 +576,12 @@ public class Agent007 extends Agent {
             currentLocation = initialLocation;
             currentLocation.addPlayerToNode();
             path = new ArrayList<Node>();//new path on tag
+            capperCantMove = false;
         }else{//if we are not in the initial position, then our move was successful
+            if (inEnvironment.hasFlag() && moveDirection.equals(DIRECTION.NOCHANGE))
+                capperCantMove = true;
+            else if (inEnvironment.hasFlag())
+                capperCantMove = false;
             switch (moveDirection){
                 case NORTH:
                     //previousLocation = currentLocation;
@@ -772,16 +789,19 @@ public class Agent007 extends Agent {
         //TODO!
         if (inEnvironment.hasFlag())
             return ATTACK_MODE.CAPTURE_FLAG;
-        return ATTACK_MODE.SEEK_FLAG;
+        else if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM))
+            return ATTACK_MODE.DEFEND_FLAG;
+        else
+            return ATTACK_MODE.SEEK_FLAG;
     }
 
     //a* for pathfinding
-    private DIRECTION findBestPathToGoal(final ATTACK_MODE attackMode, AgentEnvironment inEnvironment){
+    private DIRECTION findBestPathToGoal(final ATTACK_MODE attackMode, final AgentEnvironment inEnvironment){
         PriorityQueue<SearchNode> nodeQueue = new PriorityQueue<SearchNode>(BOARD_SIZE * BOARD_SIZE, new Comparator<SearchNode>() {
             @Override
             public int compare(SearchNode node, SearchNode t1) {
-                int nodeH = attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? node.thisNode.enemyHeuristic : node.thisNode.friendlyHeuristic,
-                    t1H = attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? t1.thisNode.enemyHeuristic : t1.thisNode.friendlyHeuristic;
+                int nodeH = getHeurisitc(inEnvironment, node.thisNode),//attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? node.thisNode.enemyHeuristic : node.thisNode.friendlyHeuristic,
+                    t1H = getHeurisitc(inEnvironment, t1.thisNode);//attackMode.equals(ATTACK_MODE.SEEK_FLAG) ? t1.thisNode.enemyHeuristic : t1.thisNode.friendlyHeuristic;
                 return Integer.compare((nodeH + node.cumulativeDistance),(t1H + t1.cumulativeDistance));
             }
         });
@@ -806,7 +826,7 @@ public class Agent007 extends Agent {
                 SearchNode northNode = new SearchNode(searchNode.thisNode.north, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.NORTH);
                 //if (!expandedNodes.contains(northNode.thisNode.north))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.north, expandedNodes)) {
-                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && northNode.thisNode.hasEnemy()){
+                    if (!attackMode.equals(ATTACK_MODE.DEFEND_FLAG) && northNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(northNode);
@@ -818,7 +838,7 @@ public class Agent007 extends Agent {
                 SearchNode southNode = new SearchNode(searchNode.thisNode.south, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.SOUTH);
                 //if (!expandedNodes.contains(southNode.thisNode.south))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.south, expandedNodes)){
-                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && southNode.thisNode.hasEnemy()){
+                    if (!attackMode.equals(ATTACK_MODE.DEFEND_FLAG) && southNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(southNode);
@@ -830,7 +850,7 @@ public class Agent007 extends Agent {
                 SearchNode eastNode = new SearchNode(searchNode.thisNode.east, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.EAST);
                 //if (!expandedNodes.contains(eastNode.thisNode.east))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.east, expandedNodes)){
-                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && eastNode.thisNode.hasEnemy()){
+                    if (!attackMode.equals(ATTACK_MODE.DEFEND_FLAG) && eastNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(eastNode);
@@ -842,7 +862,7 @@ public class Agent007 extends Agent {
                 SearchNode westNode = new SearchNode(searchNode.thisNode.west, searchNode, 1 + searchNode.cumulativeDistance, DIRECTION.WEST);
                 //if (!expandedNodes.contains(westNode.thisNode.west))
                 if (!nodeAlreadyExpanded(searchNode.thisNode.west, expandedNodes)){
-                    if (attackMode.equals(ATTACK_MODE.CAPTURE_FLAG) && westNode.thisNode.hasEnemy()){
+                    if (!attackMode.equals(ATTACK_MODE.DEFEND_FLAG) && westNode.thisNode.hasEnemy()){
                         //dont expand node
                     }else {
                         nodeQueue.add(westNode);
@@ -860,10 +880,38 @@ public class Agent007 extends Agent {
         return DIRECTION.NOCHANGE;//case when pathfinding fails
     }
 
+    private int getHeurisitc(AgentEnvironment inEnvironment, Node node){
+        int ourFlagH = node.friendlyHeuristic,
+            enemyFlagH = node.enemyHeuristic;
+        ATTACK_MODE attackMode = attackOrCapture(inEnvironment);
+        switch (attackMode){
+
+            case SEEK_FLAG:
+                //todo check for case where in flag defend mode and they are sitting on our base or more generally when flag capper is blocked
+                return capperCantMove ? ourFlagH : enemyFlagH;
+            case CAPTURE_FLAG:
+                return ourFlagH;
+            case DEFEND_FLAG:
+                return enemyFlagH;
+            default:
+                return enemyFlagH;
+        }
+    }
+
     private boolean nodeIsGoal(SearchNode node, ATTACK_MODE attackMode){
-        return (attackMode.equals(ATTACK_MODE.SEEK_FLAG)) ?
-                node.thisNode.nodeTypes.contains(NODE_TYPE.ENEMY_BASE) :
-                node.thisNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE);
+        switch (attackMode){
+
+            case SEEK_FLAG:
+            case DEFEND_FLAG:
+                //check for case where in flag defend mode and they are sitting on our base or more generally when flag capper is blocked
+                return capperCantMove ? node.thisNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) : node.thisNode.nodeTypes.contains(NODE_TYPE.ENEMY_BASE);
+            case CAPTURE_FLAG:
+                return node.thisNode.nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE);
+//            case DEFEND_FLAG:
+//                return node.thisNode.nodeTypes.contains(NODE_TYPE.ENEMY_BASE);
+            default:
+                return false;
+        }
     }
 
     private DIRECTION followPathBackHome(){
@@ -1010,7 +1058,7 @@ public class Agent007 extends Agent {
                 return false;
             return nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE) || nodeTypes.contains(NODE_TYPE.UNKOWN) ||
                     (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG) ||
-                    (nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION) && !attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG))) ;
+                    (nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION) && attack_mode.equals(ATTACK_MODE.DEFEND_FLAG))) ;
         }
         public boolean hasEnemy(){
             return nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION);
