@@ -789,7 +789,7 @@ public class Agent007 extends Agent {
         //TODO!
         if (inEnvironment.hasFlag())
             return ATTACK_MODE.CAPTURE_FLAG;
-        else if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM))
+        else if (inEnvironment.hasFlag(AgentEnvironment.ENEMY_TEAM) || capperCantMove)
             return ATTACK_MODE.DEFEND_FLAG;
         else
             return ATTACK_MODE.SEEK_FLAG;
@@ -1058,7 +1058,8 @@ public class Agent007 extends Agent {
                 return false;
             return nodeTypes.contains(NODE_TYPE.ENTERABLE_SPACE) || nodeTypes.contains(NODE_TYPE.UNKOWN) ||
                     (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.CAPTURE_FLAG) ||
-                    (nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION) && attack_mode.equals(ATTACK_MODE.DEFEND_FLAG))) ;
+                    (nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION) && attack_mode.equals(ATTACK_MODE.DEFEND_FLAG)) ||
+                    (nodeTypes.contains(NODE_TYPE.FRIENDLY_BASE) && attack_mode.equals(ATTACK_MODE.DEFEND_FLAG)) && capperCantMove) ;
         }
         public boolean hasEnemy(){
             return nodeTypes.contains(NODE_TYPE.ENEMY_LOCATION);
