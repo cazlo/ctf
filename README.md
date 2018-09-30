@@ -2,7 +2,7 @@
 
 An agent implemented for an AI tournament for CS4365.  
 
-![doc/agent-007.gif]()
+![demo](doc/agent-007.gif)
 
 [Agent007](/src/main/java/com/andrewpaettie/ctf/agent/Agent007.java) was implemented by myself, the rest 
 was provided as part of the assignment. 
