@@ -1,0 +1,6 @@
+5
+com.andrewpaettie.ctf.agent.ChenSimpleAgent
+com.andrewpaettie.ctf.agent.RandomAgent
+com.andrewpaettie.ctf.agent.BomberAgent
+com.andrewpaettie.ctf.agent.Agent007
+com.andrewpaettie.ctf.agent.Agent014

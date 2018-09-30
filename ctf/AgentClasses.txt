@@ -1,5 +1,0 @@
-4
-ctf.agent.ChenSimpleAgent
-ctf.agent.RandomAgent
-ctf.agent.BomberAgent
-ctf.agent.Agent007
